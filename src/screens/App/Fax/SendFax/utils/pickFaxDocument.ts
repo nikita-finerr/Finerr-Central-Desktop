@@ -1,4 +1,4 @@
-import * as DocumentPicker from "expo-document-picker";
+import { pick, types, keepLocalCopy } from "@react-native-documents/picker";
 
 import { showErrorToast } from "../../../../../utils/toast";
 
@@ -16,10 +16,9 @@ const SUPPORTED_EXTENSIONS = new Set([
 ]);
 
 const SUPPORTED_MIME_TYPES = [
-  "application/pdf",
+  types.pdf,
   "image/tiff",
-  "image/jpeg",
-  "image/png",
+  types.images,
   "image/gif",
   "image/bmp",
   "image/x-ms-bmp",
@@ -78,38 +77,60 @@ const isSupportedFaxDocument = (
     return false;
   }
 
-  return SUPPORTED_MIME_TYPES.includes(mimeType.toLowerCase());
+  return (
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("image/")
+  );
 };
 
 export const pickFaxDocument = async (): Promise<FaxDocument | null> => {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: SUPPORTED_MIME_TYPES,
-    multiple: false,
-    copyToCacheDirectory: true,
-  });
+  try {
+    const [file] = await pick({
+      type: SUPPORTED_MIME_TYPES,
+      allowMultiSelection: false,
+    });
 
-  if (result.canceled || !result.assets[0]) {
+    if (!file) {
+      return null;
+    }
+
+    const [localCopy] = await keepLocalCopy({
+      files: [
+        {
+          uri: file.uri,
+          fileName: file.name ?? "document",
+        },
+      ],
+      destination: "cachesDirectory",
+    });
+
+    const uri =
+      localCopy?.status === "success" ? localCopy.localUri : file.uri;
+    const name = file.name ?? "document";
+
+    if (!isSupportedFaxDocument(name, file.type)) {
+      showErrorToast(
+        "Unsupported file type. Use PDF, TIFF, or image files (JPG, PNG, GIF, BMP).",
+      );
+      return null;
+    }
+
+    if (file.size && file.size > MAX_FAX_FILE_BYTES) {
+      showErrorToast("File must be 25 MB or smaller.");
+      return null;
+    }
+
+    return {
+      name,
+      uri,
+      size: file.size,
+      mimeType: getFaxDocumentMimeType(name, file.type),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/cancel/i.test(message)) {
+      showErrorToast("Unable to pick document.");
+    }
     return null;
   }
-
-  const asset = result.assets[0];
-
-  if (!isSupportedFaxDocument(asset.name, asset.mimeType)) {
-    showErrorToast(
-      "Unsupported file type. Use PDF, TIFF, or image files (JPG, PNG, GIF, BMP).",
-    );
-    return null;
-  }
-
-  if (asset.size && asset.size > MAX_FAX_FILE_BYTES) {
-    showErrorToast("File must be 25 MB or smaller.");
-    return null;
-  }
-
-  return {
-    name: asset.name,
-    uri: asset.uri,
-    size: asset.size,
-    mimeType: getFaxDocumentMimeType(asset.name, asset.mimeType),
-  };
 };

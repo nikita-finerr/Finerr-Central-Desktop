@@ -1,4 +1,4 @@
-import { File, Paths } from "expo-file-system";
+import ReactNativeBlobUtil from "react-native-blob-util";
 
 import { resolveVoicemailAudioUrl } from "../api/voicemailApi";
 import type { PharmacyPbxConfig } from "./pharmacyPbxConfig";
@@ -26,19 +26,27 @@ export const downloadVoicemailAudio = async (
   audioPath?: string | null,
 ): Promise<string> => {
   const url = getVoicemailAudioRequestUrl(config, messageId, audioPath);
-  const file = new File(Paths.cache, `voicemail-${messageId}.wav`);
+  const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/voicemail-${messageId}.wav`;
 
-  if (file.exists) {
-    return file.uri;
+  const exists = await ReactNativeBlobUtil.fs.exists(path);
+  if (exists) {
+    return PlatformPathToUri(path);
   }
 
-  const downloaded = await File.downloadFileAsync(url, file, {
-    idempotent: true,
-    headers: {
-      "X-API-Key": config.apiKey,
-      Accept: "audio/*",
-    },
+  const result = await ReactNativeBlobUtil.config({
+    path,
+    fileCache: true,
+  }).fetch("GET", url, {
+    "X-API-Key": config.apiKey,
+    Accept: "audio/*",
   });
 
-  return downloaded.uri;
+  return PlatformPathToUri(result.path());
+};
+
+const PlatformPathToUri = (path: string): string => {
+  if (path.startsWith("file://")) {
+    return path;
+  }
+  return `file://${path}`;
 };

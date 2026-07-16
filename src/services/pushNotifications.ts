@@ -1,8 +1,8 @@
+import notifee, { AndroidImportance } from "@notifee/react-native";
 import messaging, {
   type FirebaseMessagingTypes,
 } from "@react-native-firebase/messaging";
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { PermissionsAndroid, Platform } from "react-native";
 
 import { notificationApi } from "../api/notificationApi";
 import { getDeviceId } from "../utils/deviceId";
@@ -11,15 +11,19 @@ export type PushNotificationPayload = FirebaseMessagingTypes.RemoteMessage;
 
 type Unsubscribe = () => void;
 
+const ANDROID_CHANNEL_ID = "default";
+
 const ensureAndroidChannel = async () => {
   if (Platform.OS !== "android") {
     return;
   }
 
-  await Notifications.setNotificationChannelAsync("default", {
+  await notifee.createChannel({
+    id: ANDROID_CHANNEL_ID,
     name: "Default",
-    importance: Notifications.AndroidImportance.MAX,
-    vibrationPattern: [0, 250, 250, 250],
+    importance: AndroidImportance.HIGH,
+    vibration: true,
+    lights: true,
     lightColor: "#4F46E5",
   });
 };
@@ -39,8 +43,16 @@ const requestPushPermissions = async () => {
     return true;
   }
 
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+  if (Platform.OS === "android" && Platform.Version >= 33) {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 const getFcmToken = async () => {
@@ -78,20 +90,21 @@ const displayForegroundNotification = async (
     return;
   }
 
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: remoteMessage.data ?? {},
+  await notifee.displayNotification({
+    title,
+    body,
+    data: (remoteMessage.data ?? {}) as Record<string, string>,
+    android: {
+      channelId: ANDROID_CHANNEL_ID,
+      pressAction: { id: "default" },
     },
-    trigger: null,
   });
 };
 
 const hasNotificationPayload = (remoteMessage: PushNotificationPayload) =>
   Boolean(
     remoteMessage.notification?.title?.trim() ||
-    remoteMessage.notification?.body?.trim(),
+      remoteMessage.notification?.body?.trim(),
   );
 
 const handleNotificationOpen = (

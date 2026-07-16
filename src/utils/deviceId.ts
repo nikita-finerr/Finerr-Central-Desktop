@@ -1,13 +1,13 @@
-import * as Application from "expo-application";
 import { Platform } from "react-native";
+import DeviceInfo from "react-native-device-info";
 
 export const getDeviceId = async () => {
   if (Platform.OS === "android") {
-    return Application.getAndroidId();
+    return DeviceInfo.getAndroidId();
   }
 
   if (Platform.OS === "ios") {
-    const id = await Application.getIosIdForVendorAsync();
+    const id = await DeviceInfo.getUniqueId();
     if (id) {
       return id;
     }

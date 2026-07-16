@@ -1,3 +1,4 @@
+import Clipboard from "@react-native-clipboard/clipboard";
 import { Share } from "react-native";
 
 import { showErrorToast, showSuccessToast } from "./toast";
@@ -7,12 +8,11 @@ export const copyToClipboard = async (
   successMessage = "Copied to clipboard",
 ): Promise<void> => {
   try {
-    const Clipboard = await import("expo-clipboard");
-    await Clipboard.setStringAsync(text);
+    Clipboard.setString(text);
     showSuccessToast(successMessage);
     return;
   } catch {
-    // expo-clipboard native module missing until dev client rebuild
+    // Fall through to Share sheet.
   }
 
   try {

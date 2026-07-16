@@ -1,4 +1,4 @@
-import * as Linking from "expo-linking";
+import { Linking } from "react-native";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
 

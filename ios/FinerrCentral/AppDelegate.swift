@@ -1,95 +1,87 @@
-internal import Expo
-// @generated begin bootsplash-header - expo prebuild (DO NOT MODIFY) sync-7dde938c6b171704c935d950437931dd119f9ecd
-import RNBootSplash
-// @generated end bootsplash-header
-import FirebaseCore
+import UIKit
 import React
+import React_RCTAppDelegate
 import ReactAppDependencyProvider
-import UserNotifications
+import FirebaseCore
+import RNBootSplash
 
 @main
-class AppDelegate: ExpoAppDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?
 
-  var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
+  var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
 
-  public override func application(
+  func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
     let delegate = ReactNativeDelegate()
-    let factory = ExpoReactNativeFactory(delegate: delegate)
+    let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-#if os(iOS) || os(tvOS)
     window = UIWindow(frame: UIScreen.main.bounds)
-// @generated begin @react-native-firebase/app-didFinishLaunchingWithOptions - expo prebuild (DO NOT MODIFY) sync-10e8520570672fd76b2403b7e1e27f5198a6349a
-FirebaseApp.configure()
-// @generated end @react-native-firebase/app-didFinishLaunchingWithOptions
+
+    FirebaseApp.configure()
+
     factory.startReactNative(
-      withModuleName: "main",
+      withModuleName: "FinerrCentral",
       in: window,
-      launchOptions: launchOptions)
-#endif
+      launchOptions: launchOptions
+    )
 
     CallConnectivityReminder.dismiss()
 
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    return true
   }
 
-  public override func applicationDidEnterBackground(_ application: UIApplication) {
+  func applicationDidEnterBackground(_ application: UIApplication) {
     CallConnectivityReminder.schedule()
-    super.applicationDidEnterBackground(application)
   }
 
-  public override func applicationDidBecomeActive(_ application: UIApplication) {
+  func applicationDidBecomeActive(_ application: UIApplication) {
     CallConnectivityReminder.dismiss()
-    super.applicationDidBecomeActive(application)
   }
 
-  // Linking API
-  public override func application(
+  func application(
     _ app: UIApplication,
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
-    return super.application(app, open: url, options: options) || RCTLinkingManager.application(app, open: url, options: options)
+    return RCTLinkingManager.application(app, open: url, options: options)
   }
 
-  // Universal Links
-  public override func application(
+  func application(
     _ application: UIApplication,
     continue userActivity: NSUserActivity,
     restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
   ) -> Bool {
-    let result = RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
-    return super.application(application, continue: userActivity, restorationHandler: restorationHandler) || result
+    return RCTLinkingManager.application(
+      application,
+      continue: userActivity,
+      restorationHandler: restorationHandler
+    )
   }
 }
 
-class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
-// @generated begin bootsplash-init - expo prebuild (DO NOT MODIFY) sync-ed8abcac6539972aebf80ff9b977cac92fde8246
-public override func customize(_ rootView: UIView) {
-  super.customize(rootView)
-  RNBootSplash.initWithStoryboard("BootSplash", rootView: rootView)
-}
-// @generated end bootsplash-init
-  // Extension point for config-plugins
+class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
+  override func customize(_ rootView: UIView) {
+    super.customize(rootView)
+    RNBootSplash.initWithStoryboard("BootSplash", rootView: rootView)
+  }
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {
-    // needed to return the correct URL for expo-dev-client.
-    bridge.bundleURL ?? bundleURL()
+    self.bundleURL()
   }
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")
+    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
 }

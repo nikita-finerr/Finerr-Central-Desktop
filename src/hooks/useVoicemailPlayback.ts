@@ -1,10 +1,7 @@
-import {
-  setAudioModeAsync,
-  useAudioPlayer,
-  useAudioPlayerStatus,
-  type AudioPlayer,
-} from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
+import AudioRecorderPlayer, {
+  type PlayBackType,
+} from "react-native-audio-recorder-player";
 
 import type { VoicemailMessageDto } from "../types/voicemail";
 import { getApiErrorMessage } from "../utils/apiError";
@@ -12,72 +9,75 @@ import type { PharmacyPbxConfig } from "../utils/pharmacyPbxConfig";
 import { showErrorToast } from "../utils/toast";
 import { downloadVoicemailAudio } from "../utils/voicemailAudio";
 
-let activeVoicemailPlayer: AudioPlayer | null = null;
+let activePlayerId: string | null = null;
 
-const pauseOtherVoicemailPlayers = (player: AudioPlayer) => {
-  if (activeVoicemailPlayer && activeVoicemailPlayer !== player) {
-    activeVoicemailPlayer.pause();
-    void activeVoicemailPlayer.seekTo(0);
-  }
+const players = new Map<string, AudioRecorderPlayer>();
 
-  activeVoicemailPlayer = player;
-};
-
-const isPlaybackAtEnd = (status: AudioPlayer["currentStatus"]): boolean => {
-  if (status.didJustFinish) {
-    return true;
-  }
-
-  if (status.duration <= 0) {
-    return false;
-  }
-
-  return status.currentTime >= status.duration - 0.1;
-};
-
-const waitForPlayerLoaded = async (
-  player: AudioPlayer,
-  timeoutMs = 5000,
-): Promise<void> => {
-  const startedAt = Date.now();
-
-  while (!player.currentStatus.isLoaded) {
-    if (Date.now() - startedAt > timeoutMs) {
-      throw new Error("Voicemail audio failed to load.");
+const pauseOtherVoicemailPlayers = async (playerId: string) => {
+  if (activePlayerId && activePlayerId !== playerId) {
+    const other = players.get(activePlayerId);
+    if (other) {
+      try {
+        await other.stopPlayer();
+        other.removePlayBackListener();
+      } catch {
+        // Ignore stop errors from inactive players.
+      }
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
   }
+
+  activePlayerId = playerId;
 };
 
 export const useVoicemailPlayback = (
   message: VoicemailMessageDto,
   config: PharmacyPbxConfig | null,
 ) => {
-  const player = useAudioPlayer(null);
-  const status = useAudioPlayerStatus(player);
+  const playerRef = useRef(new AudioRecorderPlayer());
+  const playerId = message.id;
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const localUriRef = useRef<string | null>(null);
   const isTogglingRef = useRef(false);
+  const durationRef = useRef(0);
+  const positionRef = useRef(0);
 
   useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: "duckOthers",
-    });
-  }, []);
+    const player = playerRef.current;
+    players.set(playerId, player);
+
+    return () => {
+      void (async () => {
+        try {
+          await player.stopPlayer();
+          player.removePlayBackListener();
+        } catch {
+          // Ignore cleanup errors.
+        }
+      })();
+      players.delete(playerId);
+      if (activePlayerId === playerId) {
+        activePlayerId = null;
+      }
+    };
+  }, [playerId]);
 
   useEffect(() => {
     localUriRef.current = null;
-    player.pause();
-    void player.seekTo(0);
+    setIsPlaying(false);
+    durationRef.current = 0;
+    positionRef.current = 0;
 
-    return () => {
-      if (activeVoicemailPlayer === player) {
-        activeVoicemailPlayer = null;
+    const player = playerRef.current;
+    void (async () => {
+      try {
+        await player.stopPlayer();
+        player.removePlayBackListener();
+      } catch {
+        // Ignore.
       }
-    };
-  }, [message.id, player]);
+    })();
+  }, [message.id]);
 
   const ensureLocalAudio = useCallback(async (): Promise<string> => {
     if (!config) {
@@ -89,15 +89,8 @@ export const useVoicemailPlayback = (
       (await downloadVoicemailAudio(config, message.id, message.audio_url));
 
     localUriRef.current = uri;
-
-    const currentStatus = player.currentStatus;
-    if (!currentStatus.isLoaded || isPlaybackAtEnd(currentStatus)) {
-      player.replace({ uri });
-      await waitForPlayerLoaded(player);
-    }
-
     return uri;
-  }, [config, message.audio_url, message.id, player]);
+  }, [config, message.audio_url, message.id]);
 
   const togglePlayback = useCallback(async () => {
     if (!config || isTogglingRef.current) {
@@ -107,10 +100,15 @@ export const useVoicemailPlayback = (
       return;
     }
 
-    const currentStatus = player.currentStatus;
+    const player = playerRef.current;
 
-    if (currentStatus.playing) {
-      player.pause();
+    if (isPlaying) {
+      try {
+        await player.pausePlayer();
+        setIsPlaying(false);
+      } catch {
+        setIsPlaying(false);
+      }
       return;
     }
 
@@ -118,30 +116,65 @@ export const useVoicemailPlayback = (
     setIsPreparing(true);
 
     try {
-      await ensureLocalAudio();
+      const uri = await ensureLocalAudio();
+      await pauseOtherVoicemailPlayers(playerId);
 
-      if (isPlaybackAtEnd(player.currentStatus)) {
-        await player.seekTo(0);
+      const nearEnd =
+        durationRef.current > 0 &&
+        positionRef.current >= durationRef.current - 100;
+
+      if (nearEnd || positionRef.current === 0) {
+        player.removePlayBackListener();
+        await player.startPlayer(uri);
+      } else {
+        await player.resumePlayer();
       }
 
-      pauseOtherVoicemailPlayers(player);
-      player.play();
+      player.addPlayBackListener((status: PlayBackType) => {
+        durationRef.current = status.duration;
+        positionRef.current = status.currentPosition;
+        const playing =
+          status.duration <= 0 || status.currentPosition < status.duration - 50;
+        setIsPlaying(playing);
+
+        if (
+          status.duration > 0 &&
+          status.currentPosition >= status.duration - 50
+        ) {
+          setIsPlaying(false);
+          positionRef.current = 0;
+          void player.stopPlayer();
+          player.removePlayBackListener();
+        }
+      });
+
+      setIsPlaying(true);
     } catch (error) {
       showErrorToast(getApiErrorMessage(error, "Failed to play voicemail."));
+      setIsPlaying(false);
     } finally {
       isTogglingRef.current = false;
       setIsPreparing(false);
     }
-  }, [config, ensureLocalAudio, player]);
+  }, [config, ensureLocalAudio, isPlaying, playerId]);
 
   const stopPlayback = useCallback(() => {
-    player.pause();
-    void player.seekTo(0);
-  }, [player]);
+    const player = playerRef.current;
+    void (async () => {
+      try {
+        await player.stopPlayer();
+        player.removePlayBackListener();
+      } catch {
+        // Ignore.
+      }
+      setIsPlaying(false);
+      positionRef.current = 0;
+    })();
+  }, []);
 
   return {
     hasAudio: Boolean(config),
-    isPlaying: status.playing,
+    isPlaying,
     isLoading: isPreparing,
     togglePlayback,
     stopPlayback,

@@ -1,10 +1,22 @@
-import * as LocalAuthentication from "expo-local-authentication";
 import { Platform } from "react-native";
+import ReactNativeBiometrics, { BiometryTypes } from "react-native-biometrics";
+
+const rnBiometrics = new ReactNativeBiometrics({
+  allowDeviceCredentials: true,
+});
 
 export const checkBiometricAvailability = async (): Promise<boolean> => {
-  const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-  return hasHardware && isEnrolled;
+  try {
+    const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+    return (
+      available &&
+      (biometryType === BiometryTypes.TouchID ||
+        biometryType === BiometryTypes.FaceID ||
+        biometryType === BiometryTypes.Biometrics)
+    );
+  } catch {
+    return false;
+  }
 };
 
 export const getBiometricLabel = (): string => {
@@ -19,15 +31,17 @@ export const authenticateWithBiometric = async (
     return false;
   }
 
-  const result = await LocalAuthentication.authenticateAsync({
-    promptMessage:
-      promptMessage ??
-      (Platform.OS === "ios"
-        ? "Authenticate with Face ID to continue"
-        : "Authenticate with Fingerprint to continue"),
-    cancelLabel: "Cancel",
-    fallbackLabel: "Use Password",
-  });
-
-  return result.success;
+  try {
+    const { success } = await rnBiometrics.simplePrompt({
+      promptMessage:
+        promptMessage ??
+        (Platform.OS === "ios"
+          ? "Authenticate with Face ID to continue"
+          : "Authenticate with Fingerprint to continue"),
+      cancelButtonText: "Cancel",
+    });
+    return success;
+  } catch {
+    return false;
+  }
 };

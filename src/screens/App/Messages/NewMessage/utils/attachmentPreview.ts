@@ -1,22 +1,9 @@
-import { File } from "expo-file-system";
 import { Platform } from "react-native";
+import ReactNativeBlobUtil from "react-native-blob-util";
 
 export type AttachmentPreviewSource =
   | { type: "uri"; uri: string }
   | { type: "html"; html: string };
-
-const bufferToBase64 = (buffer: ArrayBuffer) => {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = "";
-
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    const chunk = bytes.subarray(index, index + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-
-  return btoa(binary);
-};
 
 const buildPdfHtml = (base64: string) => `<!DOCTYPE html>
 <html>
@@ -54,6 +41,9 @@ export const canPreviewAttachment = (
   name?: string,
 ) => kind === "image" || kind === "pdf" || isPdfAttachment(mimeType, name);
 
+const uriToPath = (uri: string): string =>
+  uri.startsWith("file://") ? uri.replace("file://", "") : uri;
+
 export const getPdfPreviewSource = async (
   uri: string,
 ): Promise<AttachmentPreviewSource> => {
@@ -61,9 +51,6 @@ export const getPdfPreviewSource = async (
     return { type: "uri", uri };
   }
 
-  const file = new File(uri);
-  const buffer = await file.arrayBuffer();
-  const base64 = bufferToBase64(buffer);
-
+  const base64 = await ReactNativeBlobUtil.fs.readFile(uriToPath(uri), "base64");
   return { type: "html", html: buildPdfHtml(base64) };
 };

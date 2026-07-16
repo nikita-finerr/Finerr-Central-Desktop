@@ -1,13 +1,5 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
-import { useFonts } from "expo-font";
-import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StatusBar, StyleSheet, View } from "react-native";
 import * as Bootsplash from "react-native-bootsplash";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -105,7 +97,7 @@ const AppRoot = () => {
             ) : null}
           </View>
         ) : null}
-        <StatusBar style="auto" />
+        <StatusBar barStyle="dark-content" />
         <Toast config={toastConfig} />
       </View>
     </SafeAreaProvider>
@@ -113,17 +105,6 @@ const AppRoot = () => {
 };
 
 const App = () => {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
   return (
     <Provider store={store}>
       <KeyboardProvider>

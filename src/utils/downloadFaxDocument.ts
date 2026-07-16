@@ -1,4 +1,5 @@
-import { File, Paths } from "expo-file-system";
+import ReactNativeBlobUtil from "react-native-blob-util";
+
 import { getDocumentName } from "../screens/App/Messages/data/faxRecords";
 import { FaxDto } from "../types/fax";
 import { showErrorToast, showSuccessToast } from "./toast";
@@ -14,13 +15,13 @@ export const downloadFaxDocument = async (item: FaxDto) => {
   }
 
   const fileName = getDocumentName(item);
-  const destination = new File(Paths.document, fileName);
+  const path = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/${fileName}`;
 
   try {
-    const result = await File.downloadFileAsync(url, destination, {
-      idempotent: true,
-    });
-    console.log(result);
+    await ReactNativeBlobUtil.config({
+      path,
+      fileCache: true,
+    }).fetch("GET", url);
     showSuccessToast(`${fileName} downloaded successfully.`);
   } catch {
     showErrorToast("Failed to download document.");

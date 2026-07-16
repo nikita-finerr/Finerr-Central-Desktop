@@ -13,6 +13,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useDispatch } from "react-redux";
 
 import { authApi } from "../../api/authApi";
+import { profileApi } from "../../api/profileApi";
 import {
   AuthPrimaryButton,
   AuthRoundedField,
@@ -110,19 +111,34 @@ const Login = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
 
+    console.log("[AuthLogin] Base URL:", Env.BASE_URL);
+    console.log(
+      "[AuthLogin] Full URL:",
+      `${Env.BASE_URL}/api/auth/login`,
+    );
+
     try {
       const response = await authApi.login({ email, password });
       if (!response?.success || !response?.data?.token) {
         showErrorToast(getApiErrorMessage(response, "Something went wrong"));
         return;
       }
-      await authStorage.setAccessToken(response?.data?.token ?? "");
+
+      await authStorage.setAccessToken(response.data.token);
       await authStorage.setKeepMeSignedIn(keepMeSignedIn);
       await authStorage.setBiometricEnabled(
         keepMeSignedIn && isBiometricEnabled,
       );
-      await authStorage.setUserData(response?.data ?? {});
-      dispatch(setUserData(response?.data ?? {}));
+
+      const profile = await profileApi.getProfile();
+      if (!profile?.success || !profile?.data) {
+        await authStorage.clearSession();
+        showErrorToast(getApiErrorMessage(profile, "Something went wrong"));
+        return;
+      }
+
+      await authStorage.setUserData(profile.data);
+      dispatch(setUserData(profile.data));
     } catch (err) {
       showErrorToast(getApiErrorMessage(err, "Something went wrong"));
     } finally {
