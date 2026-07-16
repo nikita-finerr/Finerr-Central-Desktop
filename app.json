@@ -1,0 +1,157 @@
+{
+  "expo": {
+    "name": "Finerr Central",
+    "slug": "finerr-central",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "finerrcentral",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-bootsplash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A49B6"
+    },
+    "ios": {
+      "bundleIdentifier": "com.finerrcentral",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:finerrcentral.onelink.me"
+      ],
+      "entitlements": {
+        "aps-environment": "development",
+        "com.apple.developer.associated-domains": [
+          "applinks:finerrcentral.onelink.me"
+        ]
+      },
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["finerrcentral"]
+          }
+        ],
+        "NSMicrophoneUsageDescription": "Allow Finerr Central to access the microphone for phone calls.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "UIBackgroundModes": [
+          "remote-notification",
+          "audio"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.finerrcentral",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "finerrcentral.onelink.me",
+              "pathPrefix": "/jDC6"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "finerrcentral"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.USE_FULL_SCREEN_INTENT",
+        "android.permission.WAKE_LOCK",
+        "android.permission.MANAGE_OWN_CALLS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b406903a-a741-4d4f-8d39-94b2c2bee3eb"
+      }
+    },
+    "owner": "infofinerr",
+    "plugins": [
+      "./plugins/withAndroidNotificationManifest.js",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Finerr Central to access your photos to attach images to messages.",
+          "cameraPermission": "Allow Finerr Central to use the camera to attach photos to messages."
+        }
+      ],
+      [
+        "react-native-bootsplash",
+        {
+          "assetsDir": "assets/bootsplash"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Finerr Central to use Face ID for secure sign in."
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4F46E5",
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          },
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "./plugins/withCleartextNetworking.js",
+      "@config-plugins/react-native-webrtc",
+      "expo-audio",
+      [
+        "react-native-appsflyer",
+        {
+          "shouldUseStrictMode": false
+        }
+      ],
+      "./plugins/withAppsFlyerAndroid.js"
+    ]
+  }
+}

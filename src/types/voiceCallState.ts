@@ -1,0 +1,9 @@
+export enum VoiceCallState {
+  RINGING = "RINGING",
+  CONNECTING = "CONNECTING",
+  ACTIVE = "ACTIVE",
+  HELD = "HELD",
+  FAILED = "FAILED",
+  DROPPED = "DROPPED",
+  ENDED = "ENDED",
+}
