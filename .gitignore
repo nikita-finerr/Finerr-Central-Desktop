@@ -17,6 +17,8 @@ web-build/
 *.mobileprovision
 ios/Pods/
 ios/build/
+macos/Pods/
+macos/build/
 android/.gradle/
 android/app/build/
 android/build/

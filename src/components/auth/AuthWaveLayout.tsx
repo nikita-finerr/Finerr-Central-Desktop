@@ -1,25 +1,28 @@
-import LinearGradient from "react-native-linear-gradient";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { memo, type ReactNode } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { G, Path } from "react-native-svg";
+import LinearGradient from "react-native-linear-gradient";
 
 import { BrandGradient, Colors, Dimensions, Spacing } from "../../constants";
 import FinerrLogoMark from "./FinerrLogoMark";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 const WAVE_HEIGHT = Dimensions.height * 0.035;
-const HEADER_HEIGHT = Dimensions.height * 0.2;
+const HEADER_HEIGHT =
+  Platform.OS === "macos"
+    ? Math.min(Dimensions.height * 0.14, 120)
+    : Dimensions.height * 0.2;
 const BANNER_HEIGHT = HEADER_HEIGHT + WAVE_HEIGHT;
-const LOGO_WIDTH = Dimensions.width * 0.38;
+const LOGO_WIDTH =
+  Platform.OS === "macos"
+    ? Math.min(Dimensions.width * 0.28, 180)
+    : Dimensions.width * 0.38;
 const CONTENT_TOP_SPACING = Dimensions.height * 0.033;
-const PINNED_FOOTER_SCROLL_PADDING = Dimensions.height * 0.14;
+const PINNED_FOOTER_SCROLL_PADDING =
+  Platform.OS === "macos"
+    ? Math.max(Dimensions.height * 0.1, 72)
+    : Dimensions.height * 0.14;
 const PATTERN_OPACITY = 0.14;
 
 const TopographicPattern = () => {
@@ -86,6 +89,7 @@ type Props = {
 const AuthWaveLayout = ({ children, footer }: Props) => {
   const insets = useSafeAreaInsets();
   const scrollBottomPadding = PINNED_FOOTER_SCROLL_PADDING + insets.bottom;
+  const isMacos = Platform.OS === "macos";
 
   return (
     <View style={styles.root}>
@@ -121,7 +125,8 @@ const AuthWaveLayout = ({ children, footer }: Props) => {
             },
           ]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={isMacos}
+          bounces={!isMacos}
         >
           {children}
         </KeyboardAwareScrollView>

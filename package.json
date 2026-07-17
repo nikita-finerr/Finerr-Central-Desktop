@@ -5,11 +5,13 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "macos": "RCT_NEW_ARCH_ENABLED=1 react-native run-macos",
     "start": "react-native start",
     "start:clear": "react-native start --reset-cache",
     "lint": "eslint .",
     "test": "jest",
     "pod-install": "cd ios && bundle exec pod install && cd ..",
+    "pod-install:macos": "MACOS_POD_INSTALL=1 RCT_NEW_ARCH_ENABLED=1 pod install --project-directory=macos",
     "postinstall": "patch-package"
   },
   "dependencies": {
@@ -42,6 +44,7 @@
     "react-native-image-picker": "^8.2.1",
     "react-native-keyboard-controller": "1.21.6",
     "react-native-linear-gradient": "^2.8.3",
+    "react-native-macos": "^0.81.9",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
@@ -69,6 +72,7 @@
     "eslint": "^8.19.0",
     "patch-package": "^8.0.1",
     "prettier": "2.8.8",
+    "react-for-macos": "npm:react@^19.1.4",
     "typescript": "^5.8.3"
   },
   "engines": {

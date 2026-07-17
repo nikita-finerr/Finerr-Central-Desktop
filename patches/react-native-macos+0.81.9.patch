@@ -1,0 +1,40 @@
+diff --git a/node_modules/react-native-macos/Libraries/Text/TextInput/Singleline/macOS/RCTUISecureTextField.mm b/node_modules/react-native-macos/Libraries/Text/TextInput/Singleline/macOS/RCTUISecureTextField.mm
+index 6f332dc..88ce6e9 100644
+--- a/node_modules/react-native-macos/Libraries/Text/TextInput/Singleline/macOS/RCTUISecureTextField.mm
++++ b/node_modules/react-native-macos/Libraries/Text/TextInput/Singleline/macOS/RCTUISecureTextField.mm
+@@ -40,7 +40,13 @@ - (void)editWithFrame:(NSRect)rect inView:(NSView *)controlView editor:(NSText *
+ 
+ - (void)selectWithFrame:(NSRect)rect inView:(NSView *)controlView editor:(NSText *)textObj delegate:(id)delegate start:(NSInteger)selStart length:(NSInteger)selLength
+ {
+-  [super selectWithFrame:[self titleRectForBounds:rect] inView:controlView editor:textObj delegate:delegate start:selStart length:selLength];
++  // AppKit can throw from -[NSSecureTextView setDelegate:] when React focuses a
++  // secure field (observed on macOS 15+/26). Swallow to avoid aborting the app.
++  @try {
++    [super selectWithFrame:[self titleRectForBounds:rect] inView:controlView editor:textObj delegate:delegate start:selStart length:selLength];
++  } @catch (NSException *exception) {
++    NSLog(@"[RCTUISecureTextField] selectWithFrame suppressed: %@", exception);
++  }
+ }
+ 
+ - (void)drawInteriorWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
+diff --git a/node_modules/react-native-macos/scripts/codegen/generate-artifacts-executor/utils.js b/node_modules/react-native-macos/scripts/codegen/generate-artifacts-executor/utils.js
+index 7aefca2..ff4f164 100644
+--- a/node_modules/react-native-macos/scripts/codegen/generate-artifacts-executor/utils.js
++++ b/node_modules/react-native-macos/scripts/codegen/generate-artifacts-executor/utils.js
+@@ -240,7 +240,16 @@ function findExternalLibraries(
+     true,
+   );
+   // Handle third-party libraries
++  // When react-native-macos is present, skip core `react-native` codegen.
++  // Mixing RN core specs with the macOS fork (esp. across version gaps) breaks codegen.
++  const hasReactNativeMacos = Object.prototype.hasOwnProperty.call(
++    dependencies,
++    'react-native-macos',
++  );
+   return Object.keys(dependencies).flatMap(dependency => {
++    if (hasReactNativeMacos && dependency === 'react-native') {
++      return [];
++    }
+     let configFilePath = '';
+     try {
+       configFilePath = require.resolve(path.join(dependency, 'package.json'), {

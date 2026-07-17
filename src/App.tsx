@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { StatusBar, StyleSheet, View } from "react-native";
-import * as Bootsplash from "react-native-bootsplash";
-import { KeyboardProvider } from "react-native-keyboard-controller";
+import { Platform, StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
@@ -13,6 +11,8 @@ import useExtensionConnection from "./hooks/useExtensionConnection";
 import usePushNotifications from "./hooks/usePushNotifications";
 import { useAppsFlyerDeepLinking } from "./hooks/useAppsFlyerDeepLinking";
 import AppNavigator from "./navigation/AppNavigator";
+import { AppKeyboardProvider } from "./platform/AppKeyboardProvider";
+import * as Bootsplash from "./platform/bootsplash";
 import { OutboundCallProvider } from "./providers/OutboundCallProvider";
 import { setUserData } from "./redux/auth/authSlice";
 import type { RootState } from "./redux/store";
@@ -21,12 +21,14 @@ import { checkBiometricAvailability } from "./utils/biometric";
 import { authStorage } from "./utils/storage";
 import { toastConfig } from "./utils/toastConfig";
 
+const SKIP_SPLASH = Platform.OS === "macos";
+
 const AppRoot = () => {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.userData != null,
   );
   const [navigationReady, setNavigationReady] = useState(false);
-  const [splashDismissed, setSplashDismissed] = useState(false);
+  const [splashDismissed, setSplashDismissed] = useState(SKIP_SPLASH);
   const [biometricRequired, setBiometricRequired] = useState(false);
   const [biometricUnlocked, setBiometricUnlocked] = useState(false);
 
@@ -70,6 +72,15 @@ const AppRoot = () => {
     Bootsplash.hide().catch(() => {});
   }, []);
 
+  // native-stack + screens stub may never fire onReady on macOS.
+  useEffect(() => {
+    if (Platform.OS !== "macos" || navigationReady) {
+      return;
+    }
+    const timer = setTimeout(() => setNavigationReady(true), 500);
+    return () => clearTimeout(timer);
+  }, [navigationReady]);
+
   const showBiometricOverlay =
     !splashDismissed && biometricRequired && !biometricUnlocked;
 
@@ -107,11 +118,11 @@ const AppRoot = () => {
 const App = () => {
   return (
     <Provider store={store}>
-      <KeyboardProvider>
+      <AppKeyboardProvider>
         <OutboundCallProvider>
           <AppRoot />
         </OutboundCallProvider>
-      </KeyboardProvider>
+      </AppKeyboardProvider>
     </Provider>
   );
 };

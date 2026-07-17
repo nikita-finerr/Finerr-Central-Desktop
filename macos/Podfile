@@ -1,0 +1,51 @@
+require 'pathname'
+
+ws_dir = Pathname.new(__dir__)
+ws_dir = ws_dir.parent until
+  File.exist?("#{ws_dir}/node_modules/react-native-macos/scripts/react_native_pods.rb") ||
+  ws_dir.expand_path.to_s == '/'
+require "#{ws_dir}/node_modules/react-native-macos/scripts/react_native_pods.rb"
+
+prepare_react_native_project!
+
+# Force-install bridge: app uses react-native@0.85, but react-native-macos is 0.81.
+MACOS_RN_MINOR_VERSION = '81'
+
+target 'finerrcentral-macOS' do
+  platform :macos, '14.0'
+  use_native_modules!
+
+  use_react_native!(
+    :path => '../node_modules/react-native-macos',
+    :fabric_enabled => ENV['RCT_NEW_ARCH_ENABLED'] == '1',
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(installer)
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS']
+        defs = defs.nil? ? ['$(inherited)'] : Array(defs)
+        defs = defs.reject { |d| d.to_s.include?('REACT_NATIVE_MINOR_VERSION') }
+        defs << "REACT_NATIVE_MINOR_VERSION=#{MACOS_RN_MINOR_VERSION}"
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = defs
+
+        %w[OTHER_CFLAGS OTHER_CPLUSPLUSFLAGS].each do |key|
+          flags = config.build_settings[key]
+          next if flags.nil?
+
+          flags = Array(flags).map do |f|
+            f.to_s.gsub(/-DREACT_NATIVE_MINOR_VERSION=\d+/, "-DREACT_NATIVE_MINOR_VERSION=#{MACOS_RN_MINOR_VERSION}")
+          end
+          unless flags.any? { |f| f.include?('REACT_NATIVE_MINOR_VERSION') }
+            flags << "-DREACT_NATIVE_MINOR_VERSION=#{MACOS_RN_MINOR_VERSION}"
+          end
+          config.build_settings[key] = flags
+        end
+      end
+    end
+  end
+end

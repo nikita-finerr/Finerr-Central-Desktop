@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 import {
   KeyboardType,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +13,10 @@ import {
 import { memo } from "react";
 import { Colors, Fonts, FontSizes, Radius, Spacing } from "../../constants";
 import { globalStyleDefinitions } from "../../constants/globalStyleDefinitions";
+
+// react-native-macos crashes in NSSecureTextView setDelegate: when focusing
+// a secure TextInput (see RCTUISecureTextFieldCell selectWithFrame:).
+const supportsSecureTextEntry = Platform.OS !== "macos";
 
 type Props = {
   label: string;
@@ -54,7 +59,9 @@ const AuthRoundedField = ({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={Colors.textLight}
-          secureTextEntry={secureTextEntry && !isPasswordVisible}
+          secureTextEntry={
+            supportsSecureTextEntry && secureTextEntry && !isPasswordVisible
+          }
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
@@ -62,7 +69,7 @@ const AuthRoundedField = ({
           autoComplete={autoComplete}
           style={styles.input}
         />
-        {showPasswordToggle ? (
+        {showPasswordToggle && supportsSecureTextEntry ? (
           <Pressable
             onPress={onTogglePasswordVisibility}
             hitSlop={8}
